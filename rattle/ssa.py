@@ -3,11 +3,13 @@
 
 import functools
 import logging
+import sys
 from typing import List, Dict, Tuple, Optional, Set, cast, Iterator, Callable, Iterable
 
 from rattle.evmasm import EVMAsm
 from .hashes import hashes
 
+sys.setrecursionlimit(1800)
 logger = logging.getLogger(__name__)
 
 
