@@ -71,7 +71,10 @@ class InternalRecover(object):
 
         # Gather length of CBOR metadata from the end of the file
         raw_length = bytecode[-4:]
-        length = int(raw_length, base=16)
+        try:
+            length = int(raw_length, base=16)
+        except ValueError:
+            length = 0  # fallback, skip Solidity metadata
 
         # Bail on unreasonable values for length (meaning we read something else other than metadata length)
         if length * 2 > len(bytecode) - 4:
