@@ -64,35 +64,37 @@ class InternalRecover(object):
 
     @staticmethod
     def remove_metadata(bytecode: bytes):
-        bytecode = bytecode.decode().rstrip()
-        # Bail on empty bytecode
-        if not bytecode or len(bytecode) <= 2:
-            return bytecode.encode()
-
-        # Gather length of CBOR metadata from the end of the file
-        raw_length = bytecode[-4:]
+        hex_str = bytecode.hex()
+        
+        # Bail if it's empty or too short
+        if not hex_str or len(hex_str) <= 4:
+            return bytecode
+    
+        # Try to read last 2 bytes (4 hex chars) as metadata length
+        raw_length = hex_str[-4:]
         try:
-            length = int(raw_length, base=16)
+            length = int(raw_length, 16)
         except ValueError:
-            length = 0  # fallback, skip Solidity metadata
-
-        # Bail on unreasonable values for length (meaning we read something else other than metadata length)
-        if length * 2 > len(bytecode) - 4:
-            return bytecode.encode()
-
-        # Gather what we assume is the CBOR encoded metadata, and try to parse it
-        metadata_start = len(bytecode) - length * 2 - 4
-        metadata = bytecode[metadata_start: len(bytecode) - 4]
-
-        # Parse it to see if it is indeed valid metadata
+            length = 0  # fallback: no metadata
+    
+        # If claimed metadata length is too large, skip removal
+        if length * 2 > len(hex_str) - 4:
+            return bytecode
+    
+        # Extract possible metadata and try to decode it
+        metadata_start = len(hex_str) - (length * 2 + 4)
+        metadata = hex_str[metadata_start: len(hex_str) - 4]
+    
         try:
             cbor2.loads(binascii.unhexlify(metadata))
-        except:
+        except Exception:
             logger.warning('Error parsing contract metadata. Ignoring.')
-            return bytecode.encode()
+            return bytecode
+    
+        # Return trimmed bytecode without metadata
+        clean_hex = hex_str[:metadata_start]
+        return bytes.fromhex(clean_hex)
 
-        # Return bytecode without it
-        return bytecode[0:metadata_start].encode()
 
     def recover(self, function: SSAFunction) -> None:
         self.identify_blocks(function)
