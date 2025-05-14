@@ -92,7 +92,10 @@ def main():
             runtime_bytecode = contract['bin-runtime']
             bytecodes[name] = runtime_bytecode.encode('utf-8')
     else:
-        bytecodes[filename] = args.file.read()
+        raw = args.file.read().decode('utf-8').strip()
+        if raw.startswith("0x"):
+            raw = raw[2:]
+        bytecodes[filename] = bytes.fromhex(raw)
 
     for name, bytecode in bytecodes.items():
         logger.info(f'Analysing {name}...')
